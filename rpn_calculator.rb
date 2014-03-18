@@ -4,41 +4,85 @@ require './stack.rb'
 
 class RPNCalculator
  
+  # Parse should return a list class that you defined, not a ruby array 
   def self.parse(rpn_string)
-    arr = rpn_string.split(" ")
-    return arr
+    arg_list = List.new
+    rpn_string.split(' ').each {|arg| arg_list.push(arg)}
+    return arg_list
   end
 
   def self.evaluate(rpn_list)
-    stack = Stack.new
-    rpn_list.each do |item|
-      if RPNCalculator.is_number(item)
-        stack.push(item.to_f)
-      end
-      if RPNCalculator.is_operation(item)
-        x = stack.pop
-        y = stack.pop
-        stack.push(y.method(item).(x))
+    calc_stack = Stack.new
+
+    while (arg = rpn_list.shift)
+      if (self.is_number(arg))
+        calc_stack.push(arg.to_f)
+      elsif (self.is_operation(arg))
+        op = arg
+        num2 = calc_stack.pop
+        num1 = calc_stack.pop
+        val = self.calc(num1, num2, op)
+        calc_stack.push(val)
       end
     end
-    return stack.pop
+    return calc_stack.pop
   end
 
   def self.is_operation(operation)
-    if ["+", "-", "^", "*", "/"].include?(operation)
-      return true
-    end
-    return false
+    ops = ['+', '-', '^', '*', '/']
+    return ops.include?(operation)
   end
-
+  
   def self.is_number(num)
-    if num.match(/[-]?\d+/)
-      return true
-    end
-    return false
+    return (Float(num) != nil rescue false)
   end
 
+  private
+
+  def self.calc(num1, num2, op)
+    case op
+    when '+'
+      retval = num1 + num2
+    when '-'
+      retval = num1 - num2
+    when '^'
+      retval = num1 ** num2
+    when '*'
+      retval = num1 * num2
+    when '/'
+      retval = num1 / num2
+    else
+      retval = nil
+    end
+
+    return retval
+  end
 end
 
+def get_user_input
+  ended = false
+  until ended 
+    puts ("Enter an RPN expression to evaluate (or 'exit' to quit).")
+    response = gets.chomp
+    if response == 'exit'
+      ended = true
+    else
+      puts("Result is: #{RPNCalculator.evaluate(RPNCalculator.parse(response))}")
+    end
+  end
+end
 
+def process_from_file(filename)
+  puts("processing file: " + filename)
+  File.open(filename) do |file|
+    while line = file.gets
+      puts("Result is: #{RPNCalculator.evaluate(RPNCalculator.parse(line))}")
+    end
+  end
+end
 
+if ARGV.size >= 1
+  process_from_file(ARGV[0])
+else
+  get_user_input
+end
